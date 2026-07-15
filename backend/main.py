@@ -42,6 +42,10 @@ class ChatRequest(BaseModel):
     message: str
 
 
+@app.get("/")
+async def root():
+    return {"message": "TechMart AI Backend is Live!"}
+
 @app.post("/api/register")
 def register_user(request: RegisterRequest):
     if users_collection.find_one({"email": request.email}):
