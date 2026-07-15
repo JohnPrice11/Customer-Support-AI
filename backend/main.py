@@ -1,7 +1,12 @@
+import os
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import bcrypt
+
+# LangChain / RAG Imports
+from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain_community.vectorstores import FAISS
 
 # 1. Import your cloud database collections
 from backend.database.mongo import users_collection, chats_collection
@@ -19,6 +24,26 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# --- NEW: Setup paths and load the Vector Database ---
+BACKEND_DIR = os.path.dirname(os.path.abspath(__file__))
+VECTORSTORE_DIR = os.path.join(BACKEND_DIR, "vectorstore", "faiss_index")
+
+print("🧠 Loading HuggingFace Embedding Model (all-MiniLM-L6-v2)...")
+embeddings = HuggingFaceEmbeddings(
+    model_name="sentence-transformers/all-MiniLM-L6-v2",
+    model_kwargs={'device': 'cpu'}
+)
+
+# Safely load the database if it exists on startup
+if os.path.exists(VECTORSTORE_DIR):
+    print("💾 FAISS Vector Database found! Loading index...")
+    db = FAISS.load_local(VECTORSTORE_DIR, embeddings, allow_dangerous_deserialization=True)
+    retriever = db.as_retriever(search_kwargs={"k": 3})
+    print("✅ FAISS Retriever successfully mounted.")
+else:
+    print("⚠️ WARNING: Vector index folder not found at startup! Running without RAG context.")
+    retriever = None
 
 # 3. Initialize your primary AI agent when the server starts
 print("⏳ Initializing TechMart AI Agent...")
@@ -83,8 +108,22 @@ def chat_endpoint(request: ChatRequest):
         print(f"\n💬 Received message: {request.message}")
         print("🧠 AI is processing through RAG and Gemini API...")
         
-        ai_reply = support_agent.generate_response(request.message)
+        # --- NEW: Retrieve context text matching the user's message ---
+        context = ""
+        if retriever:
+            print("🔍 Searching FAISS vector database for relevant documentation...")
+            docs = retriever.invoke(request.message)
+            # Combine the page_content fields of the top 3 chunks into a clean context block
+            context = "\n".join([doc.page_content for doc in docs])
+            if context:
+                print("📝 Matching context found and injected into prompt.")
+            else:
+                print("❓ No highly relevant matches found in vector store. Passing query standard.")
         
+        # Pass the extracted context text directly into the support agent wrapper
+        ai_reply = support_agent.generate_response(request.message, context=context)
+        
+        # Save to database
         chat_doc = {
             "session_id": request.session_id,
             "user_message": request.message,

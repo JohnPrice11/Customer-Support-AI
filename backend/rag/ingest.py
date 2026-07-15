@@ -4,10 +4,18 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
 
-# Define absolute paths to avoid directory traversal issues
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# 1. Get the directory where ingest.py lives (backend/rag/)
+RAG_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# 2. Go up one level to get the backend folder (backend/)
+BACKEND_DIR = os.path.dirname(RAG_DIR)
+
+# 3. Go up one more level to get the absolute root folder (customer-support-ai/)
+BASE_DIR = os.path.dirname(BACKEND_DIR)
+
+# 4. Correctly map the final directories
 KB_DIR = os.path.join(BASE_DIR, "knowledge_base")
-VECTORSTORE_DIR = os.path.join(BASE_DIR, "backend", "vectorstore", "faiss_index")
+VECTORSTORE_DIR = os.path.join(BACKEND_DIR, "vectorstore", "faiss_index")
 
 def build_vector_store():
     print(f"📂 Searching for PDFs in: {KB_DIR}")
