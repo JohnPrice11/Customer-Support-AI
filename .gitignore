@@ -1,0 +1,21 @@
+# Environment variables
+.env
+backend/.env
+
+# Python caching & dependencies
+__pycache__/
+*.pyc
+.venv/
+env/
+requirements.txt.log
+
+# Node & Next.js build files
+node_modules/
+.next/
+dist/
+out/
+build/
+
+# IDE files
+.vscode/
+.idea/
