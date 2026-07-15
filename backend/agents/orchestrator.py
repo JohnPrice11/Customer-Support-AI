@@ -19,21 +19,21 @@ class MultiAgentOrchestrator:
             "faq": FAQAgent()
         }
 
-    def process_customer_query(self, query: str, history: list = None) -> dict:
+    def process_customer_query(self, query: str, context: str = "", history: list = None) -> dict:
         """Routes query, executes target sub-agents, and builds a comprehensive payload."""
-        # 1. Ask the Router which agents to deploy
+        
         routing_decision = self.router.route_query(query)
         selected_agents = routing_decision.get("selected_agents", ["faq"])
         justification = routing_decision.get("justification", "")
 
         responses = {}
         
-        # 2. Loop and generate answers from all flagged domains
         for agent_key in selected_agents:
             agent = self.agent_registry.get(agent_key)
             if agent:
                 print(f"🤖 Activating specialized: {agent.agent_name}")
-                responses[agent_key] = agent.generate_response(query, history)
+                # MUST pass context=context here!
+                responses[agent_key] = agent.generate_response(query, context=context)
 
         # 3. Aggregate answers cleanly if multiple agents were used
         if len(responses) == 1:

@@ -10,8 +10,8 @@ from langchain_community.vectorstores import FAISS
 # 1. Import your cloud database collections
 from backend.database.mongo import users_collection, chats_collection
 
-# 2. Import your local AI Engine
-from backend.agents.base_agent import BaseSupportAgent
+# 2. Import your Multi-Agent Orchestrator (Replacing the BaseSupportAgent)
+from backend.agents.orchestrator import MultiAgentOrchestrator
 
 app = FastAPI()
 
@@ -24,12 +24,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# --- NEW: Setup paths and load the Vector Database ---
+# --- Setup paths and load the Vector Database ---
 BACKEND_DIR = os.path.dirname(os.path.abspath(__file__))
 VECTORSTORE_DIR = os.path.join(BACKEND_DIR, "vectorstore", "faiss_index")
 
 print("🧠 Loading Google Gemini Embedding Model...")
-# Add the "gemini-" prefix here as well
 embeddings = GoogleGenerativeAIEmbeddings(model="models/gemini-embedding-001")
 
 # Safely load the database if it exists on startup
@@ -42,13 +41,10 @@ else:
     print("⚠️ WARNING: Vector index folder not found at startup! Running without RAG context.")
     retriever = None
 
-# 3. Initialize your primary AI agent when the server starts
-print("⏳ Initializing TechMart AI Agent...")
-support_agent = BaseSupportAgent(
-    agent_name="TechMart Core Agent",
-    system_instructions="You are a polite, helpful customer support agent for TechMart Electronics. Answer the user's questions clearly based on the provided company knowledge base."
-)
-print("✅ TechMart Agent ready for chat!")
+# 3. Initialize your Multi-Agent Orchestrator when the server starts
+print("⏳ Initializing TechMart Multi-Agent Orchestrator...")
+orchestrator = MultiAgentOrchestrator()
+print("✅ Multi-Agent System ready!")
 
 class RegisterRequest(BaseModel):
     name: str
@@ -103,9 +99,9 @@ def login_user(request: LoginRequest):
 def chat_endpoint(request: ChatRequest):
     try:
         print(f"\n💬 Received message: {request.message}")
-        print("🧠 AI is processing through RAG and Gemini API...")
+        print("🧠 AI is processing through RAG and Multi-Agent Orchestrator...")
         
-        # --- NEW: Retrieve context text matching the user's message ---
+        # Retrieve context text matching the user's message
         context = ""
         if retriever:
             print("🔍 Searching FAISS vector database for relevant documentation...")
@@ -117,14 +113,21 @@ def chat_endpoint(request: ChatRequest):
             else:
                 print("❓ No highly relevant matches found in vector store. Passing query standard.")
         
-        # Pass the extracted context text directly into the support agent wrapper
-        ai_reply = support_agent.generate_response(request.message, context=context)
+        # --- NEW: Pass message AND context to the Orchestrator ---
+        orchestrator_output = orchestrator.process_customer_query(
+            query=request.message, 
+            context=context
+        )
         
-        # Save to database
+        # Extract the final text from the orchestrator's dictionary output
+        ai_reply = orchestrator_output["response"]
+        
+        # Save to database (Bonus: We are now tracking which agents were used in MongoDB!)
         chat_doc = {
             "session_id": request.session_id,
             "user_message": request.message,
-            "bot_response": ai_reply
+            "bot_response": ai_reply,
+            "routed_agents": orchestrator_output.get("routed_agents", [])
         }
         chats_collection.insert_one(chat_doc)
         
