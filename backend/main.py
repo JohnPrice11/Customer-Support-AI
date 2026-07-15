@@ -4,8 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import bcrypt
 
-# LangChain / RAG Imports
-from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain_community.vectorstores import FAISS
 
 # 1. Import your cloud database collections
@@ -29,11 +28,9 @@ app.add_middleware(
 BACKEND_DIR = os.path.dirname(os.path.abspath(__file__))
 VECTORSTORE_DIR = os.path.join(BACKEND_DIR, "vectorstore", "faiss_index")
 
-print("🧠 Loading HuggingFace Embedding Model (all-MiniLM-L6-v2)...")
-embeddings = HuggingFaceEmbeddings(
-    model_name="sentence-transformers/all-MiniLM-L6-v2",
-    model_kwargs={'device': 'cpu'}
-)
+print("🧠 Loading Google Gemini Embedding Model...")
+# Add the "gemini-" prefix here as well
+embeddings = GoogleGenerativeAIEmbeddings(model="models/gemini-embedding-001")
 
 # Safely load the database if it exists on startup
 if os.path.exists(VECTORSTORE_DIR):

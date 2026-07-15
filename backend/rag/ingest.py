@@ -1,8 +1,12 @@
 import os
+from dotenv import load_dotenv  # Ensure this is added to load your .env key
 from langchain_community.document_loaders import PyPDFDirectoryLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain_google_genai import GoogleGenerativeAIEmbeddings  # NEW
 from langchain_community.vectorstores import FAISS
+
+# Load environment variables
+load_dotenv()
 
 # 1. Get the directory where ingest.py lives (backend/rag/)
 RAG_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -42,12 +46,10 @@ def build_vector_store():
     chunks = text_splitter.split_documents(documents)
     print(f"✅ Generated {len(chunks)} text chunks.")
 
-    # 3. Generate Embeddings
-    print("🧠 Initializing HuggingFace Embedding Model (all-MiniLM-L6-v2)...")
-    embeddings = HuggingFaceEmbeddings(
-        model_name="sentence-transformers/all-MiniLM-L6-v2",
-        model_kwargs={'device': 'cpu'} 
-    )
+    # 3. Generate Embeddings 
+    print("🧠 Initializing Google Gemini Embedding Model...")
+    # Add the "gemini-" prefix to the model name
+    embeddings = GoogleGenerativeAIEmbeddings(model="models/gemini-embedding-001")
 
     # 4. Build and Save the FAISS Vector Database
     print("💾 Building FAISS vector index...")
