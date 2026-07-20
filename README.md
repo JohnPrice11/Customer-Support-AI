@@ -192,7 +192,7 @@ These PDFs are:
 ## Clone Repository
 
 ```bash
-git clone https://github.com/yourusername/customer-support-ai.git
+git clone https://github.com/JohnPrice11/Customer-Support-AI
 
 cd customer-support-ai
 ```
